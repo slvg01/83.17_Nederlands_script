@@ -1,5 +1,8 @@
 # Ignorer l'environnement virtuel
+*/venv/
+**/*venv*
 .Neds_venv/
+.Neds_venv
 venv/
 
 # Fichiers temporaires Python

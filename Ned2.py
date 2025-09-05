@@ -35,7 +35,7 @@ def fetch_info(word, page):
     return "not found", "", "missing"
 
 
-# Utiliser Playwright
+# Utiliser vPlaywright
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
