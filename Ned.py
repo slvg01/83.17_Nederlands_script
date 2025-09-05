@@ -1,68 +1,39 @@
 import pandas as pd
 from wiktionaryparser import WiktionaryParser
+import time
 
-# Charger le fichier d'origine
-file_path = r"P:\8 - Sylvain PERSO\7 - Jobsrch\10 - New Job\00 - GIT_PERSO\17_Nederlands_script\Vocabulaire.xlsx"
-df = pd.read_excel(file_path)
-df.columns = df.columns.str.strip()
-
-# Initialiser le parser
 parser = WiktionaryParser()
-parser.set_default_language('dutch')
+parser.set_default_language("dutch")
 
-# Fonction pour déterminer l'article
-def get_article(word):
-    word = word.lower()
-    if word.endswith(("je", "tje", "pje", "etje", "mpje")):
-        return "het"
-    if word.endswith(("isme", "sel", "um", "ment")):
-        return "het"
-    if any(word.startswith(prefix) for prefix in ["ge", "be", "ver", "ont"]) and len(word) > 4:
-        return "het"
-    if word.endswith(("ing", "ij", "er", "aar", "heid", "ie")):
-        return "de"
-    if word.endswith("en"):  # pluriel
-        return "de"
-    return "de"  # fallback
+df = pd.read_excel("vocabulary.xlsx")
+result = parser.fetch("neus")
+print(result)
 
-not_found = []
-
-# Analyse des mots
-parts = []
-articles = []
-
-for word in df["Nederlands"]:
+"""def get_article_info(word):
     try:
-        data = parser.fetch(word)
-        if not data or not data[0]["definitions"]:
-            parts.append(None)
-            articles.append(None)
-            not_found.append(word)
-            continue
-
-        pos = data[0]["partOfSpeech"]  # nature grammaticale
-        parts.append(pos)
-
-        if pos == "noun":
-            articles.append(get_article(word))
-        else:
-            articles.append(None)
+        result = parser.fetch(word)
+        if not result:
+            return {"Article": "not found", "POS": ""}
+        pos_list = []
+        for definition in result[0]["definitions"]:
+            pos = definition["partOfSpeech"]
+            pos_list.append(pos)
+            if "noun" in pos.lower():
+                return {"Article": definition.get("article", "no article found"),
+                        "POS": ", ".join(pos_list)}
+        # No noun found but definitions exist
+        return {"Article": "not a noun", "POS": ", ".join(pos_list)}
     except Exception as e:
-        parts.append(None)
-        articles.append(None)
-        not_found.append(word)
+        print(f"Error fetching {word}: {e}")
+        return {"Article": "error", "POS": ""}
 
-# Ajouter les résultats dans le DataFrame
-df["PartOfSpeech"] = parts
-df["Article"] = articles
+# Apply to first 10 rows for testing
+df_test = df.head(10).copy()
+article_info = [get_article_info(w) for w in df_test["Ned"]]
 
-# Sauvegarder le fichier corrigé
-df.to_excel("Classeur1_corrigé.xlsx", index=False)
+df_test["Article"] = [info["Article"] for info in article_info]
+df_test["POS"] = [info["POS"] for info in article_info]
 
-# Sauvegarder la liste des mots non trouvés
-with open("not_found.txt", "w", encoding="utf-8") as f:
-    for w in not_found:
-        f.write(str(w) + "\n")
-
-print("✅ Fichier Classeur1_corrigé.xlsx créé.")
-print("⚠️ Les mots non trouvés sont listés dans not_found.txt")
+df_test.to_excel("vocabulary_ugraded_test.xlsx", index=False)
+print("Done! Test file saved as vocabulary_ugraded_test.xlsx")
+"""

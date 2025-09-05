@@ -1,0 +1,20 @@
+# Ignorer l'environnement virtuel
+.Neds_venv/
+venv/
+
+# Fichiers temporaires Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Config éditeurs
+.vscode/
+.idea/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers Excel temporaires
+~$*.xlsx
