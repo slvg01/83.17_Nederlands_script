@@ -1,39 +1,61 @@
+import pandas as pd
 from playwright.sync_api import sync_playwright
+import time
 
-def get_nouns_with_articles(word):
+# Charger le fichier Excel
+df = pd.read_excel("vocabulary.xlsx").head(10)  # seulement 10 mots pour test
+
+def fetch_info(word, page):
     url = f"https://woordenlijst.org/zoeken/?q={word}"
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(url)
-
-        # attendre que lemma_region soit chargé
+    page.goto(url)
+    try:
         page.wait_for_selector("#lemma_region", timeout=5000)
+    except:
+        return "not found", "", "missing"
 
-        # récupérer tous les blocs lemma_region
-        regions = page.query_selector_all("#lemma_region")
-        results = []
+    regions = page.query_selector_all("#lemma_region")
+    for region in regions:
+        categorie_elem = region.query_selector(".lemma_head_cat")
+        categorie = categorie_elem.inner_text().strip() if categorie_elem else "not found"
 
-        for region in regions:
-            # vérifie s'il y a "zelfstandig naamwoord" dans lemma_head_cat
-            cat_elem = region.query_selector(".lemma_head_cat")
-            if cat_elem:
-                cat_text = cat_elem.inner_text().strip()
-                if "zelfstandig naamwoord" in cat_text.lower():
-                    # article : premier <span>
-                    spans = region.query_selector_all("span")
-                    article = spans[0].inner_text().strip() if spans else ""
-                    # mot : span avec itemprop="name"
-                    name_elem = region.query_selector('span[itemprop="name"]')
-                    name = name_elem.inner_text().strip() if name_elem else ""
-                    results.append((name, article))
-        
-        browser.close()
-        return results
+        article = ""
+        if "zelfstandig naamwoord" in categorie.lower():
+            spans = region.query_selector_all("span")
+            article = spans[0].inner_text().strip() if spans else ""
 
-# Test
-words = ["neus", "meisje", "mooi", "lopen", "huis"]
-for w in words:
-    res = get_nouns_with_articles(w)
-    for name, article in res:
-        print(f"{name} -> {article}")
+        name_elem = region.query_selector('span[itemprop="name"]')
+        name_found = name_elem.inner_text().strip() if name_elem else "missing"
+
+        if "zelfstandig naamwoord" not in categorie.lower():
+            article = ""
+            categorie = "not a name"
+
+        return categorie, article, name_found
+
+    return "not found", "", "missing"
+
+
+# Utiliser Playwright
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+
+    categories = []
+    articles = []
+    names_found = []
+
+    for word in df["Ned"].tolist():
+        cat, art, name = fetch_info(word, page)
+        categories.append(cat)
+        articles.append(art)
+        names_found.append(name)
+        time.sleep(0.2)  # pause pour test
+
+    browser.close()
+
+df["Categorie"] = categories
+df["Article"] = articles
+df["Mot_trouvé"] = names_found
+
+df.to_excel("vocabulary_upgraded_test.xlsx", index=False)
+print("Fichier vocabulary_upgraded_test.xlsx créé avec succès !")
