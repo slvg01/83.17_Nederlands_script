@@ -2,7 +2,7 @@ import pandas as pd
 from playwright.sync_api import sync_playwright
 import time
 
-df = pd.read_excel("vocabulary.xlsx")
+df = pd.read_excel("vocabulary_new.xlsx")
 
 def fetch_all_categories(word, page):
     url = f"https://woordenlijst.org/zoeken/?q={word}"
@@ -96,5 +96,5 @@ for col, values in columns.items():
     df[col] = values
 
 # Save Excel
-df.to_excel("vocabulary_upgraded.xlsx", index=False)
+df.to_excel("vocabulary_new_upgraded.xlsx", index=False)
 print("Updated Excel saved as vocabulary_upgraded_first_article.xlsx")
