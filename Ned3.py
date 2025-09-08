@@ -43,7 +43,7 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
 
-    for word in df["Ned"].tolist():
+    for word in df["Nederlands"].tolist():
         formatted = fetch_all_categories(word, page)
         all_results.append(formatted)
         time.sleep(0.2)
