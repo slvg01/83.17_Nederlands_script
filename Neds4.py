@@ -36,7 +36,7 @@ def fetch_all_categories(word, page):
     return results
 
 
-def build_vocabulary(input_file="vocabulary_new.xlsx", output_file="vocabulary_test.xlsx"):
+def build_vocabulary(input_file="vocabulary_new.xlsx", output_file="vocabulary_mined.xlsx"):
     """Construit un Excel enrichi avec les catégories trouvées (20 premières lignes seulement)."""
     df = pd.read_excel(input_file)
 
