@@ -1,46 +1,47 @@
 import pandas as pd
 from playwright.sync_api import sync_playwright
-import time
+import time, random
 
 
 def fetch_all_categories(word, page):
     """Scrape toutes les catégories pour un mot donné (format uniforme)."""
     url = f"https://woordenlijst.org/zoeken/?q={word}"
-    page.goto(url)
-
     try:
+        page.goto(url)
         page.wait_for_selector("#lemma_region", timeout=5000)
     except:
-        return [("", word, "")]  # si rien trouvé → juste le mot du fichier
+        return []
 
     results = []
     regions = page.query_selector_all("#lemma_region")
 
     for region in regions:
+        # catégorie grammaticale
         categorie_elem = region.query_selector(".lemma_head_cat")
         categorie = categorie_elem.inner_text().strip() if categorie_elem else "not found"
 
+        # nom trouvé
         name_elem = region.query_selector('span[itemprop="name"]')
         name_found = name_elem.inner_text().strip() if name_elem else "missing"
 
+        # article seulement si nom
         article = ""
         if "zelfstandig naamwoord" in categorie.lower():
             spans = region.query_selector_all("span")
             article = spans[0].inner_text().strip() if spans else ""
 
+        # 🔥 format uniforme
         results.append((article, name_found, categorie))
-
-    if not results:
-        return [("", word, "")]
 
     return results
 
 
-def build_vocabulary(input_file="Vocabulary_new.xlsx", output_file="Vocabulary_new_upgraded.xlsx"):
-    """Construit un Excel enrichi avec les catégories trouvées sur woordenlijst.org"""
+def build_vocabulary(input_file="vocabulary_new.xlsx", output_file="vocabulary_test.xlsx"):
+    """Construit un Excel enrichi avec les catégories trouvées (20 premières lignes seulement)."""
     df = pd.read_excel(input_file)
 
     all_results = []
+    found_flags = []  # nouvelle colonne
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -49,14 +50,26 @@ def build_vocabulary(input_file="Vocabulary_new.xlsx", output_file="Vocabulary_n
         for word in df["Nederlands"].tolist():
             site_results = fetch_all_categories(word, page)
 
-            # supprimer les doublons avec le mot original
-            filtered_results = [r for r in site_results if r[1].lower() != word.lower()]
+            # chercher si le mot Excel est dans les résultats
+            match = None
+            for r in site_results:
+                if r[1].lower() == word.lower():
+                    match = r
+                    break
 
-            # ordre final = mot du fichier en premier + résultats du site
-            final_row = [("", word, "")] + filtered_results
+            if match:
+                # mot trouvé sur le site
+                final_row = [match] + [r for r in site_results if r != match]
+                found_flags.append("Yes")
+            else:
+                # mot pas trouvé → mettre en premier avec article/category = "not found"
+                final_row = [("", word, "not found")] + site_results
+                found_flags.append("No")
+
             all_results.append(final_row)
 
-            time.sleep(0.5)  # petit délai pour ne pas surcharger le site
+            # délai random pour éviter d'être bloqué
+            time.sleep(random.uniform(0.5, 1.5))
 
         browser.close()
 
@@ -85,11 +98,13 @@ def build_vocabulary(input_file="Vocabulary_new.xlsx", output_file="Vocabulary_n
     for col, values in columns.items():
         df[col] = values
 
+    df["Found_in_site"] = found_flags  # ✅ nouvelle colonne
+
     # sauvegarde
     df.to_excel(output_file, index=False)
-    print(f"✅ Updated Excel saved as {output_file}")
+    print(f"✅ Test Excel saved as {output_file}")
 
 
-# --- utilisation ---
+# --- test sur 20 lignes ---
 if __name__ == "__main__":
     build_vocabulary()
